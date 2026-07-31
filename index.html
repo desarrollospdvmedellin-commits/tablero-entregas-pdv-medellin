@@ -1054,6 +1054,17 @@ document.getElementById('btnExport').addEventListener('click', ()=>{
 // ============================================================
 // INIT
 // ============================================================
+async function inicializarCitasFechasCache(){
+
+    const data = await storageGet(
+        'citas_fechas'
+    );
+
+    citasFechasCache = data || [];
+
+}
+`
+
 setupDropzone();
 refreshDateSwitchUI();
 verificarAlmacenamiento().then(()=>{
