@@ -1115,26 +1115,32 @@ async function setCitasDeFecha(fecha,arr){
 let masterCache = {};
 
 async function getMasterDeFecha(fecha){
-  if(masterCache[fecha]) return masterCache[fecha];
 
-  const data = await storageGet('master:' + fecha);
+    if(masterCache[fecha]){
+        return masterCache[fecha];
+    }
 
-  masterCache[fecha] = data || null;
+    const data = await storageGet(
+        'master:' + fecha
+    );
 
-  return masterCache[fecha];
+    masterCache[fecha] = data || null;
+
+    return masterCache[fecha];
 }
 
-async function setMasterDeFecha(fecha,masterObj){
+async function setMasterDeFecha(fecha, masterObj){
 
-  const ok = await storageSet(
-    'master:' + fecha,
-    masterObj
-  );
+    const ok = await storageSet(
+        'master:' + fecha,
+        masterObj
+    );
 
-  masterCache[fecha] = masterObj;
+    masterCache[fecha] = masterObj;
 
-  return ok;
-} 
+    return ok;
+}
+
 async function inicializarCitasFechasCache(){
 
     const data = await storageGet(
@@ -1142,24 +1148,25 @@ async function inicializarCitasFechasCache(){
     );
 
     citasFechasCache = data || [];
-
 }
 
-// =========================================
+// =====================================
 // INIT
-// =========================================
+// =====================================
 
 setupDropzone();
 
 refreshDateSwitchUI();
 
-citasFechasCache = [];
+inicializarCitasFechasCache().then(() => {
 
-refreshTablero();
+    refreshTablero();
 
-refreshAgenda();
+    refreshAgenda();
 
-renderHistorialSelector();
+    renderHistorialSelector();
+
+});
 </script>
 </body>
 </html>
