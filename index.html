@@ -1067,13 +1067,12 @@ async function inicializarCitasFechasCache(){
 
 setupDropzone();
 refreshDateSwitchUI();
-verificarAlmacenamiento().then(()=>{
-  inicializarCitasFechasCache().then(()=>{
-    refreshTablero();
-    refreshAgenda();
-    renderHistorialSelector();
-  });
-});
+
+citasFechasCache = [];
+
+refreshTablero();
+refreshAgenda();
+renderHistorialSelector();
 // ===== RECUPERACION DE FUNCIONES DE ALMACENAMIENTO =====
 
 let citasFechasCache = [];
