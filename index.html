@@ -509,7 +509,12 @@ function poblarSelectHoras(selectId, fecha, citas, excludeId){
 let storageDisponible = true;
 
 async function verificarAlmacenamiento(){
-  document.getElementById('storageWarning').style.display='none';
+  const storageWarning =
+  document.getElementById('storageWarning');
+
+if(storageWarning){
+  storageWarning.style.display='none';
+}
   return true;
 }
 
