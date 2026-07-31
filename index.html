@@ -286,31 +286,6 @@
 </head>
 <body>
 
-<div id="storageWarning" style="display:none; background:#3a1414; color:#FF8080; padding:12px 24px; font-size:13.5px; text-align:center; border-bottom:1px solid #5a2222;">
-  ⚠️ Esta página no tiene disponible el guardado en la nube en este momento. Ábrela desde el enlace publicado por Claude (no como archivo descargado) para que se sincronice entre dispositivos.
-</div>
-
-<div id="appRoot">
-<header>
-  <div class="brand">
-    <div class="brand-mark"><img src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Yamaha_logo.svg" alt="Yamaha"></div>
-    <div class="brand-text">
-      <div class="eyebrow">PDV Medellín · Entrega de motos nuevas</div>
-      <div class="title">Tablero de agendamiento</div>
-    </div>
-  </div>
-  <nav class="tabs">
-    <button data-view="tablero" class="active">Tablero</button>
-    <button data-view="agenda">Agenda del día</button>
-    <button data-view="base">Base diaria</button>
-    <button data-view="historial">Historial</button>
-  </nav>
-  <div class="header-actions">
-    <button class="btn-ghost" id="btnScreenMode">🖥️ Modo pantalla</button>
-  </div>
-</header>
-
-<main>
 
   <!-- ============ TABLERO (pantalla grande, solo clientes en espera) ============ -->
   <section class="view active" id="view-tablero">
@@ -529,164 +504,36 @@ function poblarSelectHoras(selectId, fecha, citas, excludeId){
 }
 
 // ============================================================
-// ALMACENAMIENTO COMPARTIDO (window.storage)
-// ============================================================
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+// ALMACENAMIENTO LOCAL
 
-let storageDisponible = null;
+let storageDisponible = true;
+
 async function verificarAlmacenamiento(){
-  if(!window.storage || typeof window.storage.set !== 'function'){
-    storageDisponible = false;
-  } else {
-    try{ await window.storage.set('__healthcheck__', '1', true); storageDisponible = true; }
-    catch(e){ storageDisponible = false; }
-  }
-  document.getElementById('storageWarning').style.display = storageDisponible ? 'none' : 'block';
-  return storageDisponible;
+  document.getElementById('storageWarning').style.display='none';
+  return true;
 }
+
 function mensajeErrorGuardado(){
-  if(storageDisponible===false) return 'No se pudo guardar: esta página no tiene disponible el guardado en la nube aquí (ábrela desde el enlace publicado por Claude, no como archivo descargado).';
-  return 'No se pudo guardar. Puede ser un problema momentáneo — intenta de nuevo en unos segundos.';
+  return 'Error al guardar datos.';
 }
 
 async function storageGet(key){
   try{
-    const r = await window.storage.get(key, true);
-    return r ? JSON.parse(r.value) : null;
-  }catch(e){ return null; }
-}
-async function storageSet(key, value){
-  try{ await window.storage.set(key, JSON.stringify(value), true); return true; }
-  catch(e){
-    await sleep(800);
-    try{ await window.storage.set(key, JSON.stringify(value), true); return true; }
-    catch(e2){ console.error('storage set failed', key, e2); return false; }
-  }
-}
-async function getCitasDeFecha(fecha){
-  const data = await storageGet('citas:'+fecha);
-  return data || [];
-}
-async function setCitasDeFecha(fecha, arr){
-  const ok = await storageSet('citas:'+fecha, arr);
-  registrarFechaConCitas(fecha);
-  return ok;
-}
-
-let citasFechasCache = null;
-async function inicializarCitasFechasCache(){
-  citasFechasCache = (await storageGet('citas_fechas')) || [];
-}
-function registrarFechaConCitas(fecha){
-  if(!citasFechasCache) citasFechasCache = [];
-  if(!citasFechasCache.includes(fecha)){
-    citasFechasCache.push(fecha); citasFechasCache.sort();
-    storageSet('citas_fechas', citasFechasCache);
+    const valor = localStorage.getItem(key);
+    return valor ? JSON.parse(valor) : null;
+  }catch(e){
+    return null;
   }
 }
 
-let masterCache = {};
-async function getMasterDeFecha(fecha){
-  if(Object.prototype.hasOwnProperty.call(masterCache, fecha)) return masterCache[fecha];
-  const data = await storageGet('master:'+fecha);
-  masterCache[fecha] = data || null;
-  return masterCache[fecha];
-}
-async function setMasterDeFecha(fecha, masterObj){
-  const ok = await storageSet('master:'+fecha, masterObj);
-  masterCache[fecha] = masterObj;
-  return ok;
-}
-
-function lookupMotorEnMaster(masterObj, motor){
-  if(!masterObj || !masterObj.rows) return null;
-  const norm = String(motor).trim().toUpperCase();
-  return masterObj.rows.find(r => String(r.motor||'').trim().toUpperCase() === norm) || null;
-}
-function enriquecerCita(cita, masterObj){
-  const row = lookupMotorEnMaster(masterObj, cita.motor);
-  if(row){
-    cita.nombre = cita.nombre || row.nombre || 'Sin datos';
-    cita.tipoMoto = cita.tipoMoto || row.tipoMoto || '—';
-    cita.asesor = cita.asesor || row.asesor || '—';
-    cita.color = cita.color || row.color || '—';
-    cita.enriquecida = true;
+async function storageSet(key,value){
+  try{
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  }catch(e){
+    return false;
   }
-  return cita;
 }
-function existeMotorActivo(citas, motor, excluirId){
-  const norm = String(motor).trim().toUpperCase();
-  return citas.some(c => c.id!==excluirId && c.motor.toUpperCase()===norm && c.estado!=='entregada');
-}
-async function agregarOActualizarCita(fecha, motor, patch){
-  const citas = await getCitasDeFecha(fecha);
-  let cita = citas.find(c=>c.motor.toUpperCase()===motor.toUpperCase() && c.estado!=='entregada');
-  if(cita){ Object.assign(cita, patch); }
-  else{
-    cita = { id: uid(), motor, fecha, horaAgendada:'', estado:'programada',
-      nombre:'', tipoMoto:'', asesor:'', color:'', tipoCliente:'',
-      horaLlegadaTs:null, horaEntregaTs:null, ...patch };
-    citas.push(cita);
-  }
-  const master = await getMasterDeFecha(fecha);
-  if(master) enriquecerCita(cita, master);
-  const ok = await setCitasDeFecha(fecha, citas);
-  return {cita, citas, ok};
-}
-async function marcarEntregada(fecha, id){
-  const citas = await getCitasDeFecha(fecha);
-  const c = citas.find(x=>x.id===id);
-  if(!c) return {citas, ok:false};
-  c.estado = 'entregada';
-  c.horaEntregaTs = Date.now();
-  const ok = await setCitasDeFecha(fecha, citas);
-  return {citas, ok};
-}
-async function marcarLlegadaPorId(fecha, id){
-  const citas = await getCitasDeFecha(fecha);
-  const c = citas.find(x=>x.id===id);
-  if(!c) return {citas, ok:false};
-  c.estado = 'esperando';
-  c.horaLlegadaTs = Date.now();
-  const master = await getMasterDeFecha(fecha);
-  if(master) enriquecerCita(c, master);
-  const ok = await setCitasDeFecha(fecha, citas);
-  return {citas, ok};
-}
-async function actualizarTipoCliente(fecha, id, tipo){
-  const citas = await getCitasDeFecha(fecha);
-  const c = citas.find(x=>x.id===id);
-  if(!c) return {citas, ok:false};
-  c.tipoCliente = tipo;
-  const ok = await setCitasDeFecha(fecha, citas);
-  return {citas, ok};
-}
-async function reagendarCita(fechaOrigen, id, nuevaFecha, nuevaHora){
-  const citasOrigen = await getCitasDeFecha(fechaOrigen);
-  const idx = citasOrigen.findIndex(c=>c.id===id);
-  if(idx===-1) return {ok:false};
-  const cita = citasOrigen[idx];
-
-  const citasDestino = (fechaOrigen===nuevaFecha) ? citasOrigen : await getCitasDeFecha(nuevaFecha);
-  if(existeMotorActivo(citasDestino, cita.motor, id)) return {ok:false, duplicado:true};
-
-  citasOrigen.splice(idx,1);
-  cita.fecha = nuevaFecha;
-  cita.horaAgendada = nuevaHora;
-  cita.estado = 'programada';
-
-  if(fechaOrigen===nuevaFecha){
-    citasOrigen.push(cita);
-    const ok = await setCitasDeFecha(fechaOrigen, citasOrigen);
-    return {ok, citasFechaOrigen: citasOrigen, citasFechaDestino: citasOrigen};
-  }
-  const okOrigen = await setCitasDeFecha(fechaOrigen, citasOrigen);
-  const nuevasDestino = citasDestino.slice();
-  nuevasDestino.push(cita);
-  const okDestino = await setCitasDeFecha(nuevaFecha, nuevasDestino);
-  return {ok: okOrigen && okDestino, citasFechaOrigen: citasOrigen, citasFechaDestino: nuevasDestino};
-}
-
 // ============================================================
 // NAVEGACIÓN DE PESTAÑAS
 // ============================================================
