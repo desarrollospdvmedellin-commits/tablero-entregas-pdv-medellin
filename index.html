@@ -1063,6 +1063,68 @@ verificarAlmacenamiento().then(()=>{
     renderHistorialSelector();
   });
 });
+// ===== RECUPERACION DE FUNCIONES DE ALMACENAMIENTO =====
+
+let citasFechasCache = [];
+
+async function storageGet(key){
+  try{
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  }catch(e){
+    return null;
+  }
+}
+
+async function storageSet(key,value){
+  try{
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+function registrarFechaConCitas(fecha){
+  if(!citasFechasCache.includes(fecha)){
+    citasFechasCache.push(fecha);
+  }
+}
+
+async function getCitasDeFecha(fecha){
+  const data = await storageGet('citas:' + fecha);
+  return data || [];
+}
+
+async function setCitasDeFecha(fecha,arr){
+  const ok = await storageSet('citas:' + fecha, arr);
+  registrarFechaConCitas(fecha);
+  return ok;
+}
+
+let masterCache = {};
+
+async function getMasterDeFecha(fecha){
+  if(masterCache[fecha]) return masterCache[fecha];
+
+  const data = await storageGet('master:' + fecha);
+
+  masterCache[fecha] = data || null;
+
+  return masterCache[fecha];
+}
+
+async function setMasterDeFecha(fecha,masterObj){
+
+  const ok = await storageSet(
+    'master:' + fecha,
+    masterObj
+  );
+
+  masterCache[fecha] = masterObj;
+
+  return ok;
+}  
 </script>
 </body>
 </html>
