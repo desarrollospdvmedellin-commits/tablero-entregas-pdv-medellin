@@ -1134,7 +1134,32 @@ async function setMasterDeFecha(fecha,masterObj){
   masterCache[fecha] = masterObj;
 
   return ok;
-}  
+} 
+async function inicializarCitasFechasCache(){
+
+    const data = await storageGet(
+        'citas_fechas'
+    );
+
+    citasFechasCache = data || [];
+
+}
+
+// =========================================
+// INIT
+// =========================================
+
+setupDropzone();
+
+refreshDateSwitchUI();
+
+citasFechasCache = [];
+
+refreshTablero();
+
+refreshAgenda();
+
+renderHistorialSelector();
 </script>
 </body>
 </html>
