@@ -545,9 +545,13 @@ document.querySelectorAll('nav.tabs button').forEach(btn=>{
     views.forEach(v=> document.getElementById('view-'+v).classList.toggle('active', v===btn.dataset.view));
   });
 });
-document.getElementById('btnScreenMode').addEventListener('click', ()=>{
-  document.body.classList.toggle('screen-mode');
-});
+const btnScreenMode = document.getElementById('btnScreenMode');
+
+if(btnScreenMode){
+  btnScreenMode.addEventListener('click', ()=>{
+    document.body.classList.toggle('screen-mode');
+  });
+}
 
 // ============================================================
 // SONIDO DE ALERTA (nuevo cliente en espera, para el tablero)
